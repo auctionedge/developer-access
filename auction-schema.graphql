@@ -1,0 +1,307 @@
+#  This is a snapshot of the schema for data accessible to the auction development team.
+#
+#
+# The base query for accessing purchased inventory currently looks like this:
+#
+# query {
+#   auction(id: "123") {
+#     assets {
+#       purchased {
+#         items {
+#           stock
+#           id
+#           vin
+#           year
+#           make
+#           model
+#         }
+#       }
+#     }
+#   }
+# }
+#
+# This view returns a list of assets that have been purchased at the auction over the last 2 weeks.
+# The list is limited to assets that have not been exited and sold from 2 weeks before and up to 7 days after the time when the call is being made.
+# The list is currently limited to 500 records.  If you want more than 500 you can pass a pageRequest object and page through them.
+
+type Query {
+  user: User
+  auction(id: ID!): Auction
+}
+
+type Auction {
+  assets: AuctionAssets
+  accounts: AuctionAccounts
+  auctionId: ID!
+  details: TenantDetails!
+}
+
+type AuctionAccountAuthorizedPayer {
+  repId: ID!
+}
+
+type AuctionAccountDetail {
+  paymentSources: [AuctionAccountPaymentSource]
+  authorizedPayers: [AuctionAccountAuthorizedPayer]
+}
+
+input AuctionAccountInput {
+  accountKey: String!
+  aaId: ID!
+}
+
+input AuctionAccountPayerInput {
+  repId: ID!
+  aaId: ID!
+}
+
+type AuctionAccountPaymentSource {
+  sourceId: ID!
+  displayName: String!
+  vendorId: ID!
+}
+
+type AuctionAccounts {
+  byKey(key: String!): AuctionAccountDetail
+}
+
+type AuthAuctionAccountPayerResponse {
+  success: Boolean!
+  message: String!
+}
+
+type AmsDetails {
+  amsId: ID!
+  amsType: String
+  siteName: String
+  paymentVendors: [PaymentVendorDetails]
+}
+
+type AuctionAccount {
+  address_lines: [String]
+  city: String
+  state: String
+  legal_name: String
+  dba_name: String
+  country_iso_code: String
+  postal_code: String
+}
+
+type AuctionInfo {
+  id: ID!
+  details: TenantDetails!
+}
+
+type PaymentVendorDetails {
+  id: ID!
+  displayName: String!
+  auctionAccessId: ID
+  vendorType: PaymentVendorType!
+  transactionFee: TransactionFeeDetails!
+}
+
+enum PaymentVendorType {
+  ach
+  credit_card
+  floorplan
+}
+
+type TenantCodes {
+  groupCode: ID
+  lookoutId: ID
+  pipelineId: ID
+  uaId: ID!
+}
+
+type TenantContactInfo {
+  address1: String
+  address2: String
+  address3: String
+  city: String
+  state: String
+  postalCode: String
+}
+
+type TenantDetails {
+  id: ID!
+  codes: TenantCodes
+  ams: AmsDetails
+  contactInfo: TenantContactInfo
+}
+
+type TransactionFeeDetails {
+  flatRate: Float
+  percentageOfTotal: Float
+}
+
+type User {
+  id: ID!
+  aaNumber: String
+  ## Auction Access Number
+  email: String
+  ## Email address
+  firstName: String
+  ## First name
+  lastName: String
+  ## Last name
+  org: String
+  ## organization code
+  role: String
+  ## role
+  type: String
+  ## type
+  username: String
+  ## username
+  pipelineInfo: PipelineInfo
+}
+
+type Announcement {
+  announcements: [String]
+  announcement: String
+  light: String
+  type: String
+}
+
+type AuctionAccount {
+  id: ID!
+  auction: AuctionInfo
+  amsKey: String!
+  displayName: String
+  type: String!
+}
+
+type AuctionAsset {
+  stock: String!
+  id: ID!
+  auction: AuctionInfo!
+  countAll: Int
+  assetId: ID!
+  source: String
+  consignorId: ID
+  consignorAccountKey: String
+  consignorAccountId: ID
+  consignorDisplayName: String
+  consignorLegalName: String
+  consignorDbaName: String
+  consignorPipelineId: String
+  vin: String
+  stockNumber: String
+  floorAmount: Int
+  year: String
+  make: String
+  model: String
+  color: String
+  exteriorColor: String
+  trim: String
+  odometer: String
+  bodyStyle: String
+  engineSize: String
+  cylinders: String
+  cylinderConfiguration: String
+  fuelType: String
+  transmissionType: String
+  drivetrain: String
+  drivetrainDesc: String
+  interiorColor: String
+  crStatus: String
+  mmrValue: Int
+  blackBookValue: Int
+  buyerAccountId: ID
+  buyerAccountKey: String
+  buyerDisplayName: String
+  saleAmount: Int
+  saleListingSaleDate: String
+  saleListingSoldDateLastRanTime: String
+  saleListingSaleStatus: String
+  saleListingLane: String
+  saleListingLot: String
+  saleListingVenueName: String
+  saleListingVenueCode: String
+  saleListingVenueUrl: String
+  saleMethod: String
+  sellerAgentId: ID
+  sellerAgentName: String
+  sellerAgentEmail: String
+  sellerAgentPhoneMobile: String
+  buyerAgentId: ID
+  buyerAgentName: String
+  buyerAgentPicture: String
+  buyerAgentEmail: String
+  buyerAgentPhoneMobile: String
+  announcement: Announcement
+  photoCount: Int
+  pipelineUri: String
+  hasTitle: String
+  titleNumber: String
+  titleState: String
+  titleReceivedDate: String
+  activeDeal: Deal
+}
+
+type AuctionAssetList {
+  items: [AuctionAsset]
+  pageInfo: PageInfo
+}
+
+##
+## AuctionAssets
+##
+## These Assets are specific to an auction - the auction is the custodian - as
+## specified in a `auction(id)` field in the schema hierarchy.
+##
+type AuctionAssets {
+  # This returns assets purchased at the auction. The list is limited to assets that have not
+  # been exited and sold from 2 weeks before and up to 7 days after the time when the call is being made.
+  # pageRequest is optional.  If it is not passed then it will default to return all records
+  # up to a maximum of 500.  If you want more than 500 you can pass a pageRequest and page
+  # through them.
+  purchased(pageRequest: PageRequest): AuctionAssetList
+}
+
+type AuctionInfo {
+  id: ID!
+  code: String!
+  displayName: String
+}
+
+type Currency {
+  cents: Int!
+  currencyCode: String!
+}
+
+type Deal {
+  charges: [DealCharge]
+}
+
+type DealCharge {
+  id: ID!
+  displayName: String!
+  chargeType: String!
+  amount: Currency!
+}
+
+type PageInfo {
+  # This is the current page being returned
+  pageNumber: Int
+  # This is the current number of records in each page
+  pageSize: Int!
+  # This is the total records across all pages
+  totalRecords: Int
+  # This will be true if there is another page after this one
+  hasNextPage: Boolean!
+  # This will be true if there is a previous page before this one
+  hasPreviousPage: Boolean!
+}
+
+##
+## Pagination
+##
+input PageRequest {
+  # The page number is 1 based.  If you do not pass pageNumber and you are not
+  # using cursor based pages then it essentially treats it as 1.
+  # This is optional to support cursor based pagination in the future
+  pageNumber: Int
+  # The page size is the number of records in each page.  This will also be
+  # used with totalAsseets to calculate weather there is a next page or not.
+  pageSize: Int!
+}
