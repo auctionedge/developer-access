@@ -30,8 +30,10 @@ type Query {
 }
 
 type Auction {
-  assets: AuctionAssets
+  account(id: ID!): AuctionAccountDetail
   accounts: AuctionAccounts
+  asset: UserAsset
+  assets: AuctionAssets
   auctionId: ID!
   details: TenantDetails!
 }
@@ -40,9 +42,49 @@ type AuctionAccountAuthorizedPayer {
   repId: ID!
 }
 
+enum AuctionAccountAuthorizationType {
+  AccountPayer
+  ViewGatePass
+}
+
+type AuctionAccountAuthorization {
+  representativeIds: [ID]!
+  type: AuctionAccountAuthorizationType!
+}
+
 type AuctionAccountDetail {
-  paymentSources: [AuctionAccountPaymentSource]
+  accountId: ID
+  accountKey: ID!
+  auctionAccessId: ID
+  auctionBuyerRep: String
+  auctionSellerRep: String
+  # # This will be one entry per AccountAuthorizationType (enum)
+  ## Each entry will have a list of reps that are authorized for that type.
+  authorizations: [AuctionAccountAuthorization]
+  #  Only available in the deprecated byKey
   authorizedPayers: [AuctionAccountAuthorizedPayer]
+    @deprecated(reason: "Use authorizations instead")
+  canBuy: Boolean
+  canSell: Boolean
+  cellPhoneNumber: String
+  dbaName: String
+  displayName: String
+  #  Fields from AmsAccountDetail
+  establishedAt: String
+  isActive: Boolean
+  isInViolation: Boolean
+  isTaxExempt: Boolean
+  legalName: String
+  mailingLocation: LocationDetail
+  paymentSources: [AuctionAccountPaymentSource]
+  physicalLocation: LocationDetail
+  primaryEmail: String
+  primaryFaxNumber: String
+  primaryPhoneNumber: String
+  representative(id: ID!): RepresentativeDetail
+  representatives: [RepresentativeDetail]
+  updatedAt: String
+  websiteUri: String
 }
 
 input AuctionAccountInput {
@@ -56,8 +98,9 @@ input AuctionAccountPayerInput {
 }
 
 type AuctionAccountPaymentSource {
-  sourceId: ID!
+  creditLimit: Currency
   displayName: String!
+  sourceId: ID!
   vendorId: ID!
 }
 
@@ -79,12 +122,20 @@ type AmsDetails {
 
 type AuctionAccount {
   address_lines: [String]
+  amsKey: String!
+  ams_key: String! @deprecated(reason: "Use `amsKey` instead")
+  auction: AuctionInfo
   city: String
-  state: String
-  legal_name: String
-  dba_name: String
   country_iso_code: String
+  dba_name: String
+  displayName: String
+  display_name: String @deprecated(reason: "Use `displayName` instead")
+  id: ID!
+  legal_name: String
+  paymentSources: [AuctionAccountPaymentSource]
   postal_code: String
+  state: String
+  type: String!
 }
 
 type AuctionInfo {
@@ -160,14 +211,6 @@ type Announcement {
   announcement: String
   light: String
   type: String
-}
-
-type AuctionAccount {
-  id: ID!
-  auction: AuctionInfo
-  amsKey: String!
-  displayName: String
-  type: String!
 }
 
 type AuctionAsset {
@@ -250,6 +293,8 @@ type AuctionAssetList {
 ## specified in a `auction(id)` field in the schema hierarchy.
 ##
 type AuctionAssets {
+  #  This returns an asset by ID
+  byId(assetId: String!, includeCharges: Boolean): AuctionAsset
   # This returns assets purchased at the auction. The list is limited to assets that have not
   # been exited and sold from 2 weeks before and up to 7 days after the time when the call is being made.
   # pageRequest is optional.  If it is not passed then it will default to return all records
@@ -261,7 +306,9 @@ type AuctionAssets {
 type AuctionInfo {
   id: ID!
   code: String!
+  details: TenantDetails!
   displayName: String
+  display_name: String @deprecated(reason: "Use `displayName` instead")
 }
 
 type Currency {
